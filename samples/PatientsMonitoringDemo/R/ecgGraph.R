@@ -13,20 +13,32 @@ get_theme <- function(){
                                 colour = "white")))
 }
 
-refresh <- function(patientId){
-    url_ = paste("http://localhost:8014/health/WaveformData/ports/input/0/tuples?partition=", patientId,"&partition=X100-8", sep='')
-    summary = next_set(url_, counter, last_window)
+# url - endpoint to query for ecg data, see schemas.md for example output
+# patient id  - patient to display 
+# returns a data frame with ecg  graph data
+# if there is no new data returned from the server, return empty data frame
+
+get_next_ecg_data <- function(url, patientId){
+    url_ = paste(url, patientId,"&partition=X100-8", sep='')
+    summary = get_next_window_of_data(url_, counter, last_window)
     if (length(summary) == 0){
         return (data.frame())
     } else {
+        
         counter <<-summary$counter
         last_window <<-summary$windows
+
         return (summary$data)
     }
     
 }
-next_set <- function(url_, lastTotal, lastWindows){
-            waveData = poll(url_)
+get_next_window_of_data <- function(url_, lastTotal, lastWindows){
+    # output sometimes containns windows previously seen
+    # this messes up the graph data
+    # only return new windows in the data frame
+            
+            waveData = get_json_from_url(url_)
+            
             if (nrow(waveData) == 0){
                 return(waveData)
             }

@@ -1,9 +1,13 @@
+# 0 based counter for waveform data
 counter = 0
-graph_data = data.frame()
+# This is effectively used to group waveform data into groups of 1 second
+#
 last_window = 0
 get_theme <- function(){
     return(theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
+        axis.text.y =element_blank(),
+        axis.title.y=element_blank(),
                   panel.background = element_rect(fill = "white",
                                 colour = "white",
                                 size = 0.5, linetype = "solid"),
@@ -22,13 +26,14 @@ get_next_ecg_data <- function(url, patientId){
     url_ = paste(url, patientId,"&partition=X100-8", sep='')
     summary = get_next_window_of_data(url_, counter, last_window)
     if (length(summary) == 0){
-        return (data.frame())
+        summary = list (data =  data.frame(), windows = c())
+        return(summary)
     } else {
         
         counter <<-summary$counter
         last_window <<-summary$windows
 
-        return (summary$data)
+        return (summary)
     }
     
 }
@@ -42,9 +47,11 @@ get_next_window_of_data <- function(url_, lastTotal, lastWindows){
             if (nrow(waveData) == 0){
                 return(waveData)
             }
+           
             newWindows <- waveData$windowCount
             obs <- waveData$observations
             unrepeated_windows = setdiff(newWindows, lastWindows)
+            print(obs)
             #for each set of observations
             #check its window count...if we have already seen it, skip it
             # observations is a  list of dataframes
@@ -53,11 +60,12 @@ get_next_window_of_data <- function(url_, lastTotal, lastWindows){
            for (row in 1:length(obs)) {
                if (row <= length(newWindows)){
                    #if this window is in the set of new windows
-                   curentWindow = newWindows[row]
-                   if (is.element(curentWindow, unrepeated_windows)){
+                   currentWindow = newWindows[row]
+                   if (is.element(currentWindow, unrepeated_windows)){
                        next_frame <- obs[[row]] #this is a dataframe describing this set of observations
                        next_frame <- next_frame
                        data = bind_rows(data, next_frame)
+                       data$window = rep(currentWindow, nrow(data))
                    }
                }
                 
@@ -76,5 +84,4 @@ get_next_window_of_data <- function(url_, lastTotal, lastWindows){
 invalidate_ecg <- function(){
     counter <<- 0
     last_window <<- 0
-    graph_data = data.frame()
 }

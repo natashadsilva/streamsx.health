@@ -10,15 +10,25 @@ source("html_js_utils.R")
 
 library("shinydashboard")
 
-STATUS_URL =  "http://localhost:8014/health/Status/ports/input/0/tuples" 
-#STATUS_URL = "https://syss161.pok.stglabs.ibm.com:30104/streams/jobs/9/health/Status/ports/input/0/tuples"
-ECG_URL = "http://localhost:8014/health/WaveformData/ports/input/0/tuples?&partition="
+# STREAMS_URL  = "https://syss161.pok.stglabs.ibm.com:30104/streams/jobs/14/"
+
+STREAMS_URL =  "http://localhost:8014/" 
+STATUS_ENDPOINT = "health/Status/ports/input/0/tuples"
+ECG_ENDPOINT = "health/WaveformData/ports/input/0/tuples?partition="
+
+STATUS_URL = paste(STREAMS_URL, STATUS_ENDPOINT, sep="")
+print(STATUS_URL)
+ECG_URL = paste(STREAMS_URL, ECG_ENDPOINT, sep="")
+print(ECG_URL)
+
+SECONDS_TO_SHOW = 20
 #ECG_URL = "https://syss161.pok.stglabs.ibm.com:30104/streams/jobs/9/health/WaveformData/ports/input/0/tuples?partition="#=patient-8&partition=8310-5
 
 gdata = reactiveVal()
 currentPatient = ""
 GRAPH_DATA = data.frame()
-
+GRAPH_TIMER = 0
+LAST_ROW_OF_DATA = 0
 ui <- dashboardPage(
   # Application title
 
@@ -61,6 +71,7 @@ server <- function(input, output, session) {
       
         currentPatient <<- ""
         GRAPH_DATA = data.frame()
+        GRAPH_TIMER =0
         gdata(NULL)
         invalidate_ecg()
         removeModal()
@@ -72,8 +83,8 @@ server <- function(input, output, session) {
 
       modalDialog(
           fluidRow(
-            column(width=6, plotOutput("ecg",  height="200px")),
-            column(width=6, message)),
+            column(width=12, plotOutput("ecg",  height="250px")),
+            column(width=4, message)),
             hr(),
               infoBoxOutput("hr1", width=6),
              infoBoxOutput("ABp", width=6),
@@ -119,14 +130,47 @@ server <- function(input, output, session) {
   
   
     output$ecg <- renderPlot({
-        updateInterval = 1000
+        updateInterval = 1100
         invalidateLater(updateInterval, session)
           # auto refresh
           if (currentPatient != "") {
-            latest = get_next_ecg_data(ECG_URL, currentPatient)
-            if(nrow(latest) > 0){
+       
+            batch_of_readings = get_next_ecg_data(ECG_URL, currentPatient)
+            latest = batch_of_readings$data
+
+
+            num_rows = nrow(latest)
+            # column names in latest are
+            # value, time, window,
+            # Every row in the GRAPH_DATA data frame belongs
+            # to a window in WINDOW LIST..
+            # e.g window list could be (1,3, 6)
+            if(num_rows > 0){
+                windows = batch_of_readings$windows
+                print(windows)
+                WINDOW_LIST <<- append(WINDOW_LIST, unique(windows))
+
+                # WINDOW LIST has list of windows, each window
+                # is a second of readings
+                # we only want to show readings from the last 6 Seconds
+                #of ECG data, so we only want the last 6 windows
+                # What we want is a queue of size 6 but there is no
+                # such feature in R (to my knowledge)
+                # So if we have more than 6 windows,
+                # we have more than 6 seconds of data
+                if (length(WINDOW_LIST) > SECONDS_TO_SHOW) {
+                    # if we have more than 6 seconds of data
+                     age_out_index = length(WINDOW_LIST) - SECONDS_TO_SHOW
+                     # age out index is the start index in list of windows to keep
+                    splice = c(age_out_index: length(WINDOW_LIST))
+                    # remove all other windows
+                    WINDOW_LIST <<- WINDOW_LIST[splice]
+                }
+                # merge latest graph data with existing data
                 GRAPH_DATA <<- bind_rows(GRAPH_DATA, latest)
-                GRAPH_DATA = select(GRAPH_DATA, time, value)
+                # remove any rows that are older than 6 seconds ago
+                GRAPH_DATA <<- filter (GRAPH_DATA, window %in% WINDOW_LIST)
+
                 gdata(GRAPH_DATA) #update our reactive variable
                 ggplot(gdata(), aes(x=time, y=value)) +
                             geom_line(colour='black') +
@@ -160,7 +204,8 @@ server <- function(input, output, session) {
   })
 
 }
-
+#list of current windows that will be displayed
+WINDOW_LIST = c()
 addResourcePath("www", paste(getwd(), "www", sep='/'))
 
 # Create Shiny app ----

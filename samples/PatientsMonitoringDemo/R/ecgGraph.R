@@ -4,10 +4,7 @@ counter = 0
 #
 last_window = 0
 get_theme <- function(){
-    return(theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.text.y =element_blank(),
-        axis.title.y=element_blank(),
+    return(theme(
                   panel.background = element_rect(fill = "white",
                                 colour = "white",
                                 size = 0.5, linetype = "solid"),
@@ -51,7 +48,6 @@ get_next_window_of_data <- function(url_, lastTotal, lastWindows){
             newWindows <- waveData$windowCount
             obs <- waveData$observations
             unrepeated_windows = setdiff(newWindows, lastWindows)
-            print(obs)
             #for each set of observations
             #check its window count...if we have already seen it, skip it
             # observations is a  list of dataframes

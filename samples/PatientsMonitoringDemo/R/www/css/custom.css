@@ -134,6 +134,7 @@
 
 .patient-card.alrt {
  border-color: #ff7034;
+ animation: blink 1s;
 }
 
 .alert-icon-row {
@@ -151,3 +152,4 @@
     margin-right: auto;
     font-weight: bold;
 }
+

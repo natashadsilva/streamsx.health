@@ -9,10 +9,9 @@ source("html_js_utils.R")
 
 
 library("shinydashboard")
-
 # STREAMS_URL  = "https://syss161.pok.stglabs.ibm.com:30104/streams/jobs/14/"
 
-STREAMS_URL =  "http://localhost:8014/" 
+STREAMS_URL =  "https://ndproxy-tooling-54-cpd.apps.cpstreamsx6.cp.fyre.ibm.com/streams/jobs/13/" 
 STATUS_ENDPOINT = "health/Status/ports/input/0/tuples"
 ECG_ENDPOINT = "health/WaveformData/ports/input/0/tuples?partition="
 
@@ -147,7 +146,7 @@ server <- function(input, output, session) {
             # e.g window list could be (1,3, 6)
             if(num_rows > 0){
                 windows = batch_of_readings$windows
-                print(windows)
+                # print(windows)
                 WINDOW_LIST <<- append(WINDOW_LIST, unique(windows))
 
                 # WINDOW LIST has list of windows, each window

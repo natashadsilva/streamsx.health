@@ -1,12 +1,21 @@
 library("httr")
+set_config( config( ssl_verifypeer = 0L ) )
+set_config( config( ssl_verifyhost = 0L ) )       
 library("jsonlite")
 
 NAMES = fromJSON("names.json")
 
+STREAMS_URL =  "https://ndproxy-tooling-54-cpd.apps.cpstreamsx6.cp.fyre.ibm.com/streams/jobs/13/" 
+STATUS_ENDPOINT = "health/Status/ports/input/0/tuples"
+ECG_ENDPOINT = "health/WaveformData/ports/input/0/tuples?partition="
 
-set_config(config(ssl_verifypeer = 0L))
+STATUS_URL = paste(STREAMS_URL, STATUS_ENDPOINT, sep="")
+print(STATUS_URL)
+ECG_URL = paste(STREAMS_URL, ECG_ENDPOINT, sep="")
+
 get_json_from_url <- function(url) {
     r <- GET(url, add_headers("Accept" = "application/json"))
+    
     r$status_code
     if (r$status_code == 200){
         elems = content(r, "text")
